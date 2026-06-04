@@ -1,68 +1,768 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TripFin App</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        p {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        button:hover {
-            transform: scale(1.02);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>USA Trip Finance</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c10;
+  --bg2: #14141a;
+  --bg3: #1c1c26;
+  --card: #18181f;
+  --border: #252530;
+  --accent: #00e5a0;
+  --accent2: #ff4566;
+  --gold: #ffc94a;
+  --blue: #4da6ff;
+  --text: #f0f0f8;
+  --muted: #666680;
+  --muted2: #44445a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%; height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ─── SHELL ─── */
+#app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+
+/* ─── HEADER ─── */
+.header {
+  padding: 14px 16px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.app-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.trip-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-top: 1px; }
+.person-pills { display: flex; gap: 5px; }
+.person-pill {
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  border: 1.5px solid var(--border); color: var(--muted); cursor: pointer;
+  transition: all .18s;
+}
+.person-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,.1); }
+
+/* ─── SUMMARY CARDS ─── */
+.summary {
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.sum-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 10px 8px;
+  text-align: center;
+}
+.sum-card .label { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.sum-card .value {
+  font-family: 'Space Mono', monospace;
+  font-size: 15px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.income-val { color: var(--accent); }
+.expense-val { color: var(--accent2); }
+.balance-pos { color: var(--gold); }
+.balance-neg { color: var(--accent2); }
+
+/* ─── NAV TABS ─── */
+.nav {
+  display: flex;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.nav-btn {
+  flex: 1; padding: 9px 4px; background: none; border: none;
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  cursor: pointer; letter-spacing: .5px; text-transform: uppercase;
+  position: relative; font-family: 'DM Sans', sans-serif;
+  transition: color .18s;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-btn.active::after {
+  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
+  height: 2px; background: var(--accent); border-radius: 2px;
+}
+.nav-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+/* ─── PANELS ─── */
+.panels { flex: 1; overflow: hidden; position: relative; }
+.panel { position: absolute; inset: 0; overflow-y: auto; display: none; -webkit-overflow-scrolling: touch; }
+.panel.active { display: block; }
+
+/* ─── ADD FORM ─── */
+.form-wrap { padding: 14px; }
+.form-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 14px;
+}
+
+/* Type toggle */
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.type-btn {
+  padding: 12px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: var(--bg3); color: var(--muted); font-size: 13px; font-weight: 700;
+  cursor: pointer; text-align: center; transition: all .2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.type-btn.active-income { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,.1); }
+.type-btn.active-expense { border-color: var(--accent2); color: var(--accent2); background: rgba(255,69,102,.1); }
+
+/* Amount input */
+.amount-wrap {
+  background: var(--bg3); border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 14px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  transition: border-color .2s;
+}
+.amount-wrap:focus-within { border-color: var(--accent); }
+.currency-badge {
+  font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+  color: var(--muted2); flex-shrink: 0;
+}
+.amount-input {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700;
+  color: var(--text); width: 100%; min-width: 0;
+}
+.amount-input::placeholder { color: var(--muted2); }
+
+/* Fields */
+.field-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.field {
+  background: var(--bg3); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+  transition: border-color .2s;
+}
+.field:focus-within { border-color: var(--blue); }
+.field-icon { font-size: 16px; flex-shrink: 0; }
+.field input, .field select {
+  flex: 1; background: none; border: none; outline: none;
+  font-size: 14px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-weight: 500; min-width: 0; width: 100%;
+}
+.field select option { background: var(--bg3); color: var(--text); }
+.field input::placeholder { color: var(--muted); }
+
+/* Category grid */
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.cat-btn {
+  background: var(--bg3); border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 8px 4px; text-align: center; cursor: pointer; transition: all .18s;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.cat-btn.selected { border-color: var(--gold); background: rgba(255,201,74,.1); }
+.cat-emoji { font-size: 18px; }
+.cat-label { font-size: 9px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+.cat-btn.selected .cat-label { color: var(--gold); }
+
+/* Submit btn */
+.submit-btn {
+  width: 100%; padding: 15px; border-radius: 14px; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all .2s; letter-spacing: .5px;
+}
+.submit-income { background: var(--accent); color: #000; }
+.submit-expense { background: var(--accent2); color: #fff; }
+.submit-btn:active { transform: scale(.97); }
+
+/* ─── HISTORY ─── */
+.hist-wrap { padding: 0 14px 80px; }
+.hist-date-group { margin-top: 14px; }
+.hist-date-label {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.hist-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 12px; margin-bottom: 6px;
+  transition: all .18s; cursor: pointer; position: relative; overflow: hidden;
+}
+.hist-item::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 3px 0 0 3px;
+}
+.hist-item.income::before { background: var(--accent); }
+.hist-item.expense::before { background: var(--accent2); }
+.hist-emoji { font-size: 22px; flex-shrink: 0; }
+.hist-info { flex: 1; min-width: 0; }
+.hist-desc { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hist-amount {
+  font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+  flex-shrink: 0;
+}
+.hist-amount.income { color: var(--accent); }
+.hist-amount.expense { color: var(--accent2); }
+.hist-delete {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: rgba(255,69,102,.2); border: none; border-radius: 8px;
+  color: var(--accent2); font-size: 14px; padding: 4px 8px; cursor: pointer;
+  display: none;
+}
+.hist-item.show-delete .hist-delete { display: block; }
+.hist-item.show-delete .hist-amount { opacity: 0; }
+
+.empty-state {
+  text-align: center; padding: 50px 20px;
+  color: var(--muted); font-size: 13px; line-height: 2;
+}
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+/* ─── STATS PANEL ─── */
+.stats-wrap { padding: 14px; }
+.stats-section { margin-bottom: 18px; }
+.stats-title {
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px;
+}
+.stat-bar-item { margin-bottom: 8px; }
+.stat-bar-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.stat-bar-label { font-size: 12px; font-weight: 600; }
+.stat-bar-val { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+.stat-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+
+/* City budget cards */
+.city-budgets { display: flex; flex-direction: column; gap: 8px; }
+.city-bud-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px;
+}
+.city-bud-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.city-bud-name { font-size: 13px; font-weight: 700; }
+.city-bud-spent { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--accent2); }
+.city-bud-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.city-bud-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--gold)); transition: width .5s; }
+
+/* Person breakdown */
+.person-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pb-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; text-align: center;
+}
+.pb-name { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: .5px; }
+.pb-amount { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent2); }
+.pb-income { font-size: 11px; color: var(--accent); margin-top: 2px; }
+
+/* ─── BUDGET PANEL ─── */
+.budget-wrap { padding: 14px 14px 80px; }
+.budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.budget-title { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+.total-budget-card {
+  background: linear-gradient(135deg, rgba(0,229,160,.12), rgba(77,166,255,.08));
+  border: 1px solid rgba(0,229,160,.25);
+  border-radius: 16px; padding: 18px; text-align: center; margin-bottom: 14px;
+}
+.tbc-label { font-size: 11px; color: rgba(0,229,160,.7); letter-spacing: 2px; text-transform: uppercase; }
+.tbc-amount { font-family: 'Space Mono', monospace; font-size: 36px; font-weight: 700; color: var(--accent); margin: 6px 0; }
+.tbc-sub { font-size: 11px; color: var(--muted); }
+.budget-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.br-left { display: flex; align-items: center; gap: 10px; }
+.br-emoji { font-size: 20px; }
+.br-name { font-size: 13px; font-weight: 600; }
+.br-sub { font-size: 10px; color: var(--muted); }
+.br-amount { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--gold); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 24px;
+  padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text);
+  z-index: 999; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to TripFin App</h1>
-        <p>Plan your trips and manage your finances with ease</p>
-        <button onclick="alert('Welcome to TripFin!')">Get Started</button>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="app-name">💸 USA FINANCE</div>
+        <div class="trip-label">13 ИЮНЯ — 5 ИЮЛЯ · ТРЕКЕР РАСХОДОВ</div>
+      </div>
+      <div class="person-pills" id="personPills"></div>
     </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="sum-card">
+      <div class="label">📥 Приход</div>
+      <div class="value income-val" id="totalIncome">$0</div>
+    </div>
+    <div class="sum-card">
+      <div class="label">📤 Расход</div>
+      <div class="value expense-val" id="totalExpense">$0</div>
+    </div>
+    <div class="sum-card">
+      <div class="label">💰 Остаток</div>
+      <div class="value balance-pos" id="balance">$0</div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchPanel('add')">
+      <span class="nav-icon">➕</span>ДОБАВИТЬ
+    </button>
+    <button class="nav-btn" onclick="switchPanel('history')">
+      <span class="nav-icon">📋</span>ИСТОРИЯ
+    </button>
+    <button class="nav-btn" onclick="switchPanel('stats')">
+      <span class="nav-icon">📊</span>АНАЛИЗ
+    </button>
+    <button class="nav-btn" onclick="switchPanel('budget')">
+      <span class="nav-icon">🗓</span>ПЛАН
+    </button>
+  </div>
+
+  <!-- PANELS -->
+  <div class="panels">
+
+    <!-- ADD PANEL -->
+    <div class="panel active" id="panel-add">
+      <div class="form-wrap">
+        <div class="form-title">Новая запись</div>
+
+        <!-- Type -->
+        <div class="type-toggle">
+          <div class="type-btn active-expense" id="btn-expense" onclick="setType('expense')">
+            📤 Расход
+          </div>
+          <div class="type-btn" id="btn-income" onclick="setType('income')">
+            📥 Приход
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="amount-wrap">
+          <div class="currency-badge">$</div>
+          <input class="amount-input" id="amountInput" type="number" inputmode="decimal" placeholder="0.00" step="0.01" min="0">
+        </div>
+
+        <!-- Fields -->
+        <div class="field-group">
+          <div class="field">
+            <span class="field-icon">📝</span>
+            <input id="descInput" type="text" placeholder="Описание (напр. обед в McDonald's)">
+          </div>
+          <div class="field">
+            <span class="field-icon">🏙</span>
+            <select id="citySelect">
+              <option value="">Выберите город</option>
+              <option>🗽 Нью-Йорк</option>
+              <option>🌉 Сан-Франциско</option>
+              <option>🌴 Лос-Анджелес</option>
+              <option>🎰 Лас-Вегас</option>
+              <option>🏜️ Гранд-Каньон</option>
+              <option>⚽ Хьюстон</option>
+              <option>🌊 Майами</option>
+              <option>🎢 Орландо</option>
+              <option>🌿 Саванна</option>
+              <option>🌸 Чарльстон</option>
+              <option>🏛️ Вашингтон D.C.</option>
+              <option>✈️ В дороге</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="field-icon">👤</span>
+            <select id="personSelect">
+              <option value="all">Общий / Все</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="cat-grid" id="catGrid"></div>
+
+        <!-- Submit -->
+        <button class="submit-btn submit-expense" id="submitBtn" onclick="addEntry()">
+          Добавить расход
+        </button>
+      </div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="panel" id="panel-history">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 14px 0">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">История</div>
+        <button onclick="clearAll()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">Очистить всё</button>
+      </div>
+      <div class="hist-wrap" id="histList"></div>
+    </div>
+
+    <!-- STATS PANEL -->
+    <div class="panel" id="panel-stats">
+      <div class="stats-wrap">
+        <div class="stats-section">
+          <div class="stats-title">Расходы по категориям</div>
+          <div id="catStats"></div>
+        </div>
+        <div class="stats-section">
+          <div class="stats-title">По городам</div>
+          <div class="city-budgets" id="cityStats"></div>
+        </div>
+        <div class="stats-section">
+          <div class="stats-title">По участникам</div>
+          <div class="person-breakdown" id="personStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUDGET PLAN PANEL -->
+    <div class="panel" id="panel-budget">
+      <div class="budget-wrap">
+        <div class="total-budget-card">
+          <div class="tbc-label">Бюджет поездки</div>
+          <div class="tbc-amount" id="budgetRemaining">$5,000</div>
+          <div class="tbc-sub" id="budgetSubtext">Введите бюджет и отслеживайте</div>
+        </div>
+
+        <!-- Budget input -->
+        <div class="field" style="margin-bottom:14px;">
+          <span class="field-icon">💵</span>
+          <input id="budgetInput" type="number" inputmode="decimal" placeholder="Введите ваш общий бюджет ($)" style="font-size:15px;font-weight:700;">
+          <button onclick="setBudget()" style="background:var(--accent);border:none;border-radius:8px;padding:6px 12px;color:#000;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0;">SET</button>
+        </div>
+
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Плановый бюджет по статьям</div>
+
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">✈️</span><div><div class="br-name">Авиабилеты</div><div class="br-sub">Все перелёты</div></div></div><div class="br-amount">$940–1510</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🚗</span><div><div class="br-name">Транспорт</div><div class="br-sub">Аренда + бензин</div></div></div><div class="br-amount">$870–1220</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🏨</span><div><div class="br-name">Жильё</div><div class="br-sub">21 ночь</div></div></div><div class="br-amount">$810–1360</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🍔</span><div><div class="br-name">Еда</div><div class="br-sub">22 дня</div></div></div><div class="br-amount">$946–1474</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🎟️</span><div><div class="br-name">Аттракции</div><div class="br-sub">Достопримечательности</div></div></div><div class="br-amount">$632–832</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">⚽</span><div><div class="br-name">Матч</div><div class="br-sub">Узбекистан–Португалия</div></div></div><div class="br-amount">$100–300</div></div>
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🍸</span><div><div class="br-name">Ночная жизнь</div><div class="br-sub">Бары, клубы</div></div></div><div class="br-amount">$350–600</div></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+const CATEGORIES = {
+  expense: [
+    { emoji: '🍔', name: 'Еда' },
+    { emoji: '🚗', name: 'Транспорт' },
+    { emoji: '🏨', name: 'Жильё' },
+    { emoji: '🎟️', name: 'Развлечения' },
+    { emoji: '🛍️', name: 'Покупки' },
+    { emoji: '✈️', name: 'Авиа' },
+    { emoji: '💊', name: 'Медицина' },
+    { emoji: '📸', name: 'Фото' }
+  ],
+  income: [
+    { emoji: '💰', name: 'Зарплата' },
+    { emoji: '🎁', name: 'Подарок' },
+    { emoji: '💸', name: 'Возврат' },
+    { emoji: '🤝', name: 'Расчет' }
+  ]
+};
+
+const PERSONS = ['Алекс', 'Мария', 'Иван'];
+const CITIES = ['🗽 Нью-Йорк', '🌉 Сан-Франциско', '🌴 Лос-Анджелес', '🎰 Лас-Вегас', '🏜️ Гранд-Каньон', '⚽ Хьюстон', '🌊 Майами', '🎢 Орландо', '🌿 Саванна', '🌸 Чарльстон', '🏛️ Вашингтон D.C.', '✈️ В дороге'];
+
+let data = {
+  entries: [],
+  budget: 5000,
+  currentType: 'expense',
+  selectedCategory: null,
+  selectedPerson: 'all'
+};
+
+function initApp() {
+  loadData();
+  renderCategoryGrid();
+  renderPersonPills();
+  renderPersonSelect();
+  updateSummary();
+  renderHistory();
+}
+
+function setType(type) {
+  data.currentType = type;
+  data.selectedCategory = null;
+  document.getElementById('btn-expense').classList.toggle('active-expense', type === 'expense');
+  document.getElementById('btn-income').classList.toggle('active-income', type === 'income');
+  document.getElementById('submitBtn').textContent = type === 'income' ? 'Добавить приход' : 'Добавить расход';
+  document.getElementById('submitBtn').className = `submit-btn submit-${type}`;
+  renderCategoryGrid();
+}
+
+function renderCategoryGrid() {
+  const cats = CATEGORIES[data.currentType];
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = cats.map((cat, idx) => `
+    <div class="cat-btn ${data.selectedCategory === idx ? 'selected' : ''}" onclick="selectCategory(${idx})">
+      <div class="cat-emoji">${cat.emoji}</div>
+      <div class="cat-label">${cat.name}</div>
+    </div>
+  `).join('');
+}
+
+function selectCategory(idx) {
+  data.selectedCategory = data.selectedCategory === idx ? null : idx;
+  renderCategoryGrid();
+}
+
+function renderPersonPills() {
+  const pills = document.getElementById('personPills');
+  pills.innerHTML = PERSONS.map(p => `
+    <div class="person-pill ${data.selectedPerson === p ? 'active' : ''}" onclick="selectPerson('${p}')">
+      ${p[0]}
+    </div>
+  `).join('');
+}
+
+function renderPersonSelect() {
+  const select = document.getElementById('personSelect');
+  select.innerHTML = '<option value="all">Общий / Все</option>' + PERSONS.map(p => `<option>${p}</option>`).join('');
+}
+
+function selectPerson(person) {
+  data.selectedPerson = data.selectedPerson === person ? 'all' : person;
+  renderPersonPills();
+}
+
+function addEntry() {
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const desc = document.getElementById('descInput').value || 'Без описания';
+  const city = document.getElementById('citySelect').value || 'Не указан';
+  const person = document.getElementById('personSelect').value;
+  
+  if (!amount || amount <= 0) {
+    showToast('Введите сумму');
+    return;
+  }
+  
+  const cat = CATEGORIES[data.currentType][data.selectedCategory] || { emoji: '❓', name: 'Прочее' };
+  
+  data.entries.push({
+    id: Date.now(),
+    type: data.currentType,
+    amount,
+    desc,
+    city,
+    person,
+    category: cat.name,
+    emoji: cat.emoji,
+    date: new Date().toISOString()
+  });
+  
+  saveData();
+  updateSummary();
+  renderHistory();
+  
+  document.getElementById('amountInput').value = '';
+  document.getElementById('descInput').value = '';
+  document.getElementById('citySelect').value = '';
+  
+  showToast(`${data.currentType === 'income' ? '+' : '−'}$${amount.toFixed(2)} добавлено`);
+}
+
+function deleteEntry(id) {
+  data.entries = data.entries.filter(e => e.id !== id);
+  saveData();
+  updateSummary();
+  renderHistory();
+  showToast('Удалено');
+}
+
+function clearAll() {
+  if (confirm('Очистить всю историю?')) {
+    data.entries = [];
+    saveData();
+    updateSummary();
+    renderHistory();
+  }
+}
+
+function updateSummary() {
+  const income = data.entries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const expense = data.entries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const balance = income - expense;
+  
+  document.getElementById('totalIncome').textContent = `$${income.toFixed(2)}`;
+  document.getElementById('totalExpense').textContent = `$${expense.toFixed(2)}`;
+  document.getElementById('balance').textContent = `$${balance.toFixed(2)}`;
+  document.getElementById('balance').className = balance >= 0 ? 'value balance-pos' : 'value balance-neg';
+  
+  updateStats();
+}
+
+function renderHistory() {
+  const hist = document.getElementById('histList');
+  
+  if (!data.entries.length) {
+    hist.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>Нет записей</div>';
+    return;
+  }
+  
+  const grouped = {};
+  data.entries.forEach(e => {
+    const date = new Date(e.date).toLocaleDateString('ru-RU');
+    if (!grouped[date]) grouped[date] = [];
+    grouped[date].push(e);
+  });
+  
+  let html = '';
+  Object.keys(grouped).reverse().forEach(date => {
+    html += `<div class="hist-date-group">
+      <div class="hist-date-label">${date}</div>
+      ${grouped[date].reverse().map(e => `
+        <div class="hist-item ${e.type}" onclick="this.classList.toggle('show-delete')">
+          <div class="hist-emoji">${e.emoji}</div>
+          <div class="hist-info">
+            <div class="hist-desc">${e.desc}</div>
+            <div class="hist-meta">${e.city} · ${e.person}</div>
+          </div>
+          <div class="hist-amount ${e.type}">${e.type === 'income' ? '+' : '−'}$${e.amount.toFixed(2)}</div>
+          <button class="hist-delete" onclick="event.stopPropagation(); deleteEntry(${e.id})">✕</button>
+        </div>
+      `).join('')}
+    </div>`;
+  });
+  
+  hist.innerHTML = html;
+}
+
+function updateStats() {
+  // Category stats
+  const catStats = {};
+  data.entries.filter(e => e.type === 'expense').forEach(e => {
+    catStats[e.category] = (catStats[e.category] || 0) + e.amount;
+  });
+  
+  const maxCat = Math.max(...Object.values(catStats), 1);
+  document.getElementById('catStats').innerHTML = Object.entries(catStats).map(([cat, amt]) => `
+    <div class="stat-bar-item">
+      <div class="stat-bar-top">
+        <div class="stat-bar-label">${cat}</div>
+        <div class="stat-bar-val">$${amt.toFixed(2)}</div>
+      </div>
+      <div class="stat-bar-track">
+        <div class="stat-bar-fill" style="width:${(amt / maxCat) * 100}%"></div>
+      </div>
+    </div>
+  `).join('');
+  
+  // City stats
+  const cityStats = {};
+  data.entries.filter(e => e.type === 'expense').forEach(e => {
+    cityStats[e.city] = (cityStats[e.city] || 0) + e.amount;
+  });
+  
+  document.getElementById('cityStats').innerHTML = Object.entries(cityStats).map(([city, amt]) => `
+    <div class="city-bud-card">
+      <div class="city-bud-top">
+        <div class="city-bud-name">${city}</div>
+        <div class="city-bud-spent">$${amt.toFixed(2)}</div>
+      </div>
+      <div class="city-bud-bar">
+        <div class="city-bud-fill" style="width:${Math.min((amt / 500) * 100, 100)}%"></div>
+      </div>
+    </div>
+  `).join('');
+  
+  // Person stats
+  const personStats = {};
+  data.entries.forEach(e => {
+    const p = e.person || 'Все';
+    if (!personStats[p]) personStats[p] = { income: 0, expense: 0 };
+    if (e.type === 'income') personStats[p].income += e.amount;
+    else personStats[p].expense += e.amount;
+  });
+  
+  document.getElementById('personStats').innerHTML = Object.entries(personStats).map(([person, stats]) => `
+    <div class="pb-card">
+      <div class="pb-name">${person}</div>
+      <div class="pb-amount">$${stats.expense.toFixed(2)}</div>
+      <div class="pb-income">+$${stats.income.toFixed(2)}</div>
+    </div>
+  `).join('');
+}
+
+function setBudget() {
+  const val = parseFloat(document.getElementById('budgetInput').value);
+  if (val > 0) {
+    data.budget = val;
+    const remaining = data.budget - data.entries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+    document.getElementById('budgetRemaining').textContent = `$${remaining.toFixed(2)}`;
+    document.getElementById('budgetSubtext').textContent = remaining > 0 ? `Осталось ${((remaining / data.budget) * 100).toFixed(0)}%` : 'Бюджет превышен!';
+    saveData();
+  }
+}
+
+function switchPanel(panel) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${panel}`).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.target.closest('.nav-btn').classList.add('active');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function saveData() {
+  localStorage.setItem('tripfinData', JSON.stringify(data));
+}
+
+function loadData() {
+  const saved = localStorage.getItem('tripfinData');
+  if (saved) Object.assign(data, JSON.parse(saved));
+}
+
+initApp();
+</script>
+
 </body>
 </html>
