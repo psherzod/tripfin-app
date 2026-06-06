@@ -473,4 +473,428 @@ html, body {
         <div class="budget-row"><div class="br-left"><span class="br-emoji">🍔</span><div><div class="br-name">Еда</div><div class="br-sub">22 дня</div></div></div><div class="br-amount">$946–1474</div></div>
         <div class="budget-row"><div class="br-left"><span class="br-emoji">🎟️</span><div><div class="br-name">Аттракции</div><div class="br-sub">Достопримечательности</div></div></div><div class="br-amount">$632–832</div></div>
         <div class="budget-row"><div class="br-left"><span class="br-emoji">⚽</span><div><div class="br-name">Матч</div><div class="br-sub">Узбекистан–Португалия</div></div></div><div class="br-amount">$100–300</div></div>
-        <div class="budget-row"><div class="br-left"><span class="br-emoji">🍸</span><div><div class="br-name">Ночная жизнь</div><div class="br-sub">Бары, клубы</div></div></div><div class="br-amount">$350–600</div><
+        <div class="budget-row"><div class="br-left"><span class="br-emoji">🍸</span><div><div class="br-name">Ночная жизнь</div><div class="br-sub">Бары, клубы</div></div></div><div class="br-amount">$350–600</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+const STORAGE_KEY = 'usaTripFinance_v2';
+
+let state = {
+  entries: [],
+  persons: ['Шерзод', 'Музаффар', 'Анвар'],
+  activePerson: 'all',
+  budget: 5000,
+  currentType: 'expense',
+  selectedCat: '🍔',
+};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      state = { ...state, ...parsed };
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      entries: state.entries,
+      persons: state.persons,
+      budget: state.budget,
+    }));
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+// CATEGORIES
+// ─────────────────────────────────────────────
+const CATEGORIES = [
+  { emoji: '🍔', label: 'Еда' },
+  { emoji: '🚗', label: 'Транспорт' },
+  { emoji: '🏨', label: 'Жильё' },
+  { emoji: '🎟️', label: 'Аттракции' },
+  { emoji: '🛍️', label: 'Шоппинг' },
+  { emoji: '🍸', label: 'Бары' },
+  { emoji: '⚽', label: 'Матч' },
+  { emoji: '💊', label: 'Прочее' },
+];
+
+const INCOME_CATEGORIES = [
+  { emoji: '💵', label: 'Наличные' },
+  { emoji: '💳', label: 'Карта' },
+  { emoji: '🔄', label: 'Обмен' },
+  { emoji: '👥', label: 'От друга' },
+  { emoji: '🏦', label: 'Банк' },
+  { emoji: '📱', label: 'Перевод' },
+  { emoji: '🎁', label: 'Бонус' },
+  { emoji: '💰', label: 'Другое' },
+];
+
+function renderCategories() {
+  const grid = document.getElementById('catGrid');
+  const cats = state.currentType === 'expense' ? CATEGORIES : INCOME_CATEGORIES;
+  grid.innerHTML = cats.map(c => `
+    <div class="cat-btn ${state.selectedCat === c.emoji ? 'selected' : ''}" onclick="selectCat('${c.emoji}')">
+      <div class="cat-emoji">${c.emoji}</div>
+      <div class="cat-label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectCat(emoji) {
+  state.selectedCat = emoji;
+  renderCategories();
+}
+
+// ─────────────────────────────────────────────
+// TYPE TOGGLE
+// ─────────────────────────────────────────────
+function setType(type) {
+  state.currentType = type;
+  state.selectedCat = type === 'expense' ? '🍔' : '💵';
+
+  const be = document.getElementById('btn-expense');
+  const bi = document.getElementById('btn-income');
+  const sb = document.getElementById('submitBtn');
+
+  be.className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
+  bi.className = 'type-btn' + (type === 'income' ? ' active-income' : '');
+
+  sb.className = 'submit-btn ' + (type === 'expense' ? 'submit-expense' : 'submit-income');
+  sb.textContent = type === 'expense' ? 'Добавить расход' : 'Добавить приход';
+
+  renderCategories();
+}
+
+// ─────────────────────────────────────────────
+// PERSONS
+// ─────────────────────────────────────────────
+function renderPersonPills() {
+  const container = document.getElementById('personPills');
+  const items = [{ id: 'all', label: 'Все' }, ...state.persons.map(p => ({ id: p, label: p }))];
+  container.innerHTML = items.map(p => `
+    <div class="person-pill ${state.activePerson === p.id ? 'active' : ''}"
+         onclick="setActivePerson('${p.id}')">${p.label}</div>
+  `).join('');
+
+  // Person select in form
+  const sel = document.getElementById('personSelect');
+  sel.innerHTML = '<option value="all">Общий / Все</option>' +
+    state.persons.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function setActivePerson(id) {
+  state.activePerson = id;
+  renderPersonPills();
+  updateSummary();
+  renderHistory();
+  renderStats();
+}
+
+// ─────────────────────────────────────────────
+// FILTERED ENTRIES
+// ─────────────────────────────────────────────
+function filteredEntries() {
+  if (state.activePerson === 'all') return state.entries;
+  return state.entries.filter(e => e.person === state.activePerson || e.person === 'all');
+}
+
+// ─────────────────────────────────────────────
+// SUMMARY
+// ─────────────────────────────────────────────
+function updateSummary() {
+  const entries = filteredEntries();
+  const income = entries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const expense = entries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const bal = income - expense;
+
+  document.getElementById('totalIncome').textContent = '$' + income.toFixed(0);
+  document.getElementById('totalExpense').textContent = '$' + expense.toFixed(0);
+  const balEl = document.getElementById('balance');
+  balEl.textContent = (bal >= 0 ? '+$' : '-$') + Math.abs(bal).toFixed(0);
+  balEl.className = 'value ' + (bal >= 0 ? 'balance-pos' : 'balance-neg');
+}
+
+// ─────────────────────────────────────────────
+// ADD ENTRY
+// ─────────────────────────────────────────────
+function addEntry() {
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  if (!amount || amount <= 0) { showToast('⚠️ Введите сумму!'); return; }
+
+  const desc = document.getElementById('descInput').value.trim() || (state.currentType === 'expense' ? 'Расход' : 'Приход');
+  const city = document.getElementById('citySelect').value || '✈️ В дороге';
+  const person = document.getElementById('personSelect').value;
+
+  const entry = {
+    id: Date.now(),
+    type: state.currentType,
+    amount,
+    desc,
+    city,
+    person,
+    cat: state.selectedCat,
+    date: new Date().toLocaleDateString('ru-RU', { day:'numeric', month:'short' }),
+    time: new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }),
+    ts: Date.now(),
+  };
+
+  state.entries.unshift(entry);
+  saveState();
+  updateSummary();
+  renderHistory();
+  renderStats();
+
+  // Reset form
+  document.getElementById('amountInput').value = '';
+  document.getElementById('descInput').value = '';
+
+  showToast(state.currentType === 'expense' ? `✅ Расход $${amount.toFixed(2)} добавлен` : `✅ Приход $${amount.toFixed(2)} добавлен`);
+
+  // Haptic
+  try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────
+function renderHistory() {
+  const container = document.getElementById('histList');
+  const entries = filteredEntries();
+
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">💸</div>
+      Пока нет записей.<br>Добавьте первую транзакцию!
+    </div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  entries.forEach(e => {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  });
+
+  container.innerHTML = Object.entries(groups).map(([date, items]) => `
+    <div class="hist-date-group">
+      <div class="hist-date-label">${date}</div>
+      ${items.map(e => `
+        <div class="hist-item ${e.type}" id="hi-${e.id}" onclick="toggleDelete(${e.id})">
+          <div class="hist-emoji">${e.cat}</div>
+          <div class="hist-info">
+            <div class="hist-desc">${e.desc}</div>
+            <div class="hist-meta">${e.city} · ${e.person === 'all' ? 'Все' : e.person} · ${e.time}</div>
+          </div>
+          <div class="hist-amount ${e.type}">${e.type === 'income' ? '+' : '-'}$${e.amount.toFixed(2)}</div>
+          <button class="hist-delete" onclick="deleteEntry(event, ${e.id})">🗑</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+let activeDeleteId = null;
+function toggleDelete(id) {
+  if (activeDeleteId && activeDeleteId !== id) {
+    document.getElementById('hi-' + activeDeleteId)?.classList.remove('show-delete');
+  }
+  const el = document.getElementById('hi-' + id);
+  el?.classList.toggle('show-delete');
+  activeDeleteId = el?.classList.contains('show-delete') ? id : null;
+}
+
+function deleteEntry(e, id) {
+  e.stopPropagation();
+  state.entries = state.entries.filter(en => en.id !== id);
+  saveState();
+  updateSummary();
+  renderHistory();
+  renderStats();
+  showToast('🗑 Запись удалена');
+}
+
+function clearAll() {
+  if (!confirm('Удалить все записи?')) return;
+  state.entries = [];
+  saveState();
+  updateSummary();
+  renderHistory();
+  renderStats();
+  showToast('🗑 Все записи удалены');
+}
+
+// ─────────────────────────────────────────────
+// STATS
+// ─────────────────────────────────────────────
+function renderStats() {
+  const entries = filteredEntries();
+  const expenses = entries.filter(e => e.type === 'expense');
+  const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
+
+  // By category
+  const catMap = {};
+  expenses.forEach(e => { catMap[e.cat] = (catMap[e.cat] || 0) + e.amount; });
+  const catSorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const maxCat = catSorted[0]?.[1] || 1;
+
+  const catLabel = { '🍔':'Еда','🚗':'Транспорт','🏨':'Жильё','🎟️':'Аттракции','🛍️':'Шоппинг','🍸':'Бары','⚽':'Матч','💊':'Прочее','💵':'Наличные','💳':'Карта','🔄':'Обмен','👥':'От друга','🏦':'Банк','📱':'Перевод','🎁':'Бонус','💰':'Другое' };
+
+  const colors = ['#00e5a0','#4da6ff','#ffc94a','#ff4566','#b47cff','#ff9f40','#06d6a0','#ef233c'];
+
+  document.getElementById('catStats').innerHTML = catSorted.length === 0
+    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0">Нет данных</div>'
+    : catSorted.map(([emoji, amt], i) => `
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <div class="stat-bar-label">${emoji} ${catLabel[emoji] || emoji}</div>
+          <div class="stat-bar-val">$${amt.toFixed(0)} · ${totalExp > 0 ? Math.round(amt/totalExp*100) : 0}%</div>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill" style="width:${(amt/maxCat)*100}%;background:${colors[i%colors.length]}"></div>
+        </div>
+      </div>
+    `).join('');
+
+  // By city
+  const cityMap = {};
+  expenses.forEach(e => { if(e.city) cityMap[e.city] = (cityMap[e.city] || 0) + e.amount; });
+  const citySorted = Object.entries(cityMap).sort((a, b) => b[1] - a[1]);
+  const maxCity = citySorted[0]?.[1] || 1;
+
+  document.getElementById('cityStats').innerHTML = citySorted.length === 0
+    ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:10px 0">Нет данных</div>'
+    : citySorted.map(([city, amt]) => `
+      <div class="city-bud-card">
+        <div class="city-bud-top">
+          <div class="city-bud-name">${city}</div>
+          <div class="city-bud-spent">$${amt.toFixed(0)}</div>
+        </div>
+        <div class="city-bud-bar">
+          <div class="city-bud-fill" style="width:${(amt/maxCity)*100}%"></div>
+        </div>
+      </div>
+    `).join('');
+
+  // By person
+  const personMap = {};
+  const incomeByPerson = {};
+  state.persons.forEach(p => { personMap[p] = 0; incomeByPerson[p] = 0; });
+  entries.forEach(e => {
+    if (e.person !== 'all') {
+      if (e.type === 'expense') personMap[e.person] = (personMap[e.person] || 0) + e.amount;
+      else incomeByPerson[e.person] = (incomeByPerson[e.person] || 0) + e.amount;
+    }
+  });
+
+  document.getElementById('personStats').innerHTML = state.persons.map(p => `
+    <div class="pb-card">
+      <div class="pb-name">${p}</div>
+      <div class="pb-amount">-$${(personMap[p]||0).toFixed(0)}</div>
+      <div class="pb-income">+$${(incomeByPerson[p]||0).toFixed(0)}</div>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────
+// BUDGET
+// ─────────────────────────────────────────────
+function setBudget() {
+  const val = parseFloat(document.getElementById('budgetInput').value);
+  if (!val || val <= 0) { showToast('⚠️ Введите бюджет'); return; }
+  state.budget = val;
+  saveState();
+  updateBudgetDisplay();
+  showToast(`✅ Бюджет $${val.toFixed(0)} установлен`);
+}
+
+function updateBudgetDisplay() {
+  const expenses = state.entries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+  const remaining = state.budget - expenses;
+  const pct = Math.min(expenses / state.budget * 100, 100);
+  const el = document.getElementById('budgetRemaining');
+  const sub = document.getElementById('budgetSubtext');
+  el.textContent = (remaining >= 0 ? '$' : '-$') + Math.abs(remaining).toFixed(0);
+  el.style.color = remaining >= 0 ? 'var(--accent)' : 'var(--accent2)';
+  sub.textContent = `Потрачено $${expenses.toFixed(0)} из $${state.budget.toFixed(0)} (${pct.toFixed(0)}%)`;
+}
+
+// ─────────────────────────────────────────────
+// PANEL SWITCHING
+// ─────────────────────────────────────────────
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'stats') renderStats();
+  if (name === 'budget') updateBudgetDisplay();
+  if (name === 'history') renderHistory();
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─────────────────────────────────────────────
+// TELEGRAM INIT
+// ─────────────────────────────────────────────
+function initTelegram() {
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.colorScheme === 'light') {
+        document.documentElement.style.setProperty('--bg', '#f5f5f8');
+        document.documentElement.style.setProperty('--bg2', '#ffffff');
+        document.documentElement.style.setProperty('--bg3', '#f0f0f5');
+        document.documentElement.style.setProperty('--card', '#ffffff');
+        document.documentElement.style.setProperty('--text', '#111118');
+        document.documentElement.style.setProperty('--muted', '#888899');
+        document.documentElement.style.setProperty('--border', '#e0e0e8');
+      }
+      // Save persons from Telegram if available
+      const user = tg.initDataUnsafe?.user;
+      if (user?.first_name && !state.persons.includes(user.first_name)) {
+        state.persons[0] = user.first_name;
+      }
+    }
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+loadState();
+initTelegram();
+renderPersonPills();
+renderCategories();
+updateSummary();
+renderHistory();
+updateBudgetDisplay();
+</script>
+</body>
+</html>
